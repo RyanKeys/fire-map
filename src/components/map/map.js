@@ -1,45 +1,153 @@
 import React from "react";
-import { GoogleMap, KmlLayer, useLoadScript } from "@react-google-maps/api";
+import "../../App.css";
+import Legend from "../map/legend";
+import { GoogleMap, useLoadScript, Marker } from "@react-google-maps/api";
+import usePlacesAutoComplete, {
+  getGeocode,
+  getLatLng,
+} from "use-places-autocomplete";
+import {
+  Combobox,
+  ComboboxInput,
+  ComboboxPopover,
+  ComboboxOption,
+} from "@reach/combobox";
+import "@reach/combobox/styles.css";
 import key from "../../secret.json";
 import mapStyles from "../../mapStyles";
-import KML from "../../MODIS_C6_Global_24h.kml";
+import fireData from "../../app.json";
+//desired API libraries and options
 const libraries = ["places"];
 const options = {
   styles: mapStyles,
   disableDefaultUI: true,
   zoomControl: true,
 };
-
-const Map = () => {
+//Map Component
+export default function Map() {
+  //Loads Map w/API key and desired libraries
   const { isLoaded, loadError } = useLoadScript({
     googleMapsApiKey: key,
     libraries,
   });
+  //const to store Map coorinates in React.useRef()
+  const mapRef = React.useRef();
+  //fn applies any user input data into mapRef
+  const onMapLoad = React.useCallback((map) => {
+    mapRef.current = map;
+  }, []);
+
+  //fn Moves Map to user input location
+  const panTo = React.useCallback(({ lat, lng }) => {
+    mapRef.current.panTo({ lat, lng });
+    mapRef.current.setZoom(14);
+  }, []);
 
   if (loadError) return "Error loading maps";
   if (!isLoaded) return "Loading maps";
-
+  //Makes map fullscreen
   const mapStyles = {
     height: "100vh",
     width: "100%",
   };
-
-  //random center location. Should request the users location and if not go based off ISP info.
+  const searchStyle = {
+    width: "100em",
+  };
+  //random center location. TODO: Should request Google Geocode API
   const defaultCenter = {
-    lat: 41.3851,
-    lng: 2.1734,
+    lat: 37.468319,
+    lng: -122.143936,
   };
 
+  //Creates Map HTML
   return (
     <div>
+      {/* Inits the search Component and passes it the panTo fn */}
+      <Search panTo={panTo} />
+      {/* Google Map Component */}
       <GoogleMap
         mapContainerStyle={mapStyles}
         zoom={8}
         center={defaultCenter}
         options={options}
-      ></GoogleMap>
-      <KmlLayer url={KML} />
+        onLoad={onMapLoad}
+      >
+        {/* Takes every JSON object in fireData and maps them to a Marker on the map */}
+        {fireData.map((fire) => (
+          <Marker
+            // TODO change key to lat lng and date.
+            key={fire.id}
+            position={{
+              lat: parseFloat(fire.latitude),
+              lng: parseFloat(fire.longitude),
+            }}
+          />
+        ))}
+      </GoogleMap>
     </div>
   );
-};
-export default Map;
+}
+
+function Search({ panTo }) {
+  const {
+    ready,
+    value,
+    suggestions: { status, data },
+    setValue,
+    clearSuggestions,
+  } = usePlacesAutoComplete({
+    requestOptions: {
+      location: { lat: () => 37.468319, lng: () => -122.143936 },
+      radius: 200 * 1000,
+    },
+  });
+  return (
+    <div
+      className="search"
+      style={{
+        position: "absolute",
+        zIndex: 4,
+        padding: "3em",
+        paddingTop: 0,
+        // Add onClick event to Show/Hide background Color
+        // background:
+        //   "linear-gradient(to bottom right,RGBA(25,25,25,.9),RGBA(2, 16, 25,.9)",
+        // height: "10%",
+      }}
+    >
+      <Legend />
+      <Combobox
+        onSelect={async (address) => {
+          setValue(address, true);
+          clearSuggestions();
+          try {
+            const results = await getGeocode({ address });
+            const { lat, lng } = await getLatLng(results[0]);
+            panTo({ lat, lng });
+          } catch (error) {}
+        }}
+      >
+        <ComboboxInput
+          value={value}
+          onChange={(e) => {
+            setValue(e.target.value);
+          }}
+          disabled={!ready}
+          placeholder="Enter an Address:"
+        />
+        <ComboboxPopover>
+          {status === "OK" &&
+            data.map(({ id, description }) => (
+              <div style={{ zIndex: 12 }}>
+                <ComboboxOption
+                  key={id}
+                  style={{ zIndex: 10 }}
+                  value={description}
+                />
+              </div>
+            ))}
+        </ComboboxPopover>
+      </Combobox>
+    </div>
+  );
+}
