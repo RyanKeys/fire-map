@@ -81,6 +81,11 @@ export default function Map() {
               lat: parseFloat(fire.latitude),
               lng: parseFloat(fire.longitude),
             }}
+            icon={{
+              url: "/fire.png",
+              scaledSize: new window.google.maps.Size(30, 30),
+              origin: new window.google.maps.Point(0, 0),
+            }}
           />
         ))}
       </GoogleMap>
@@ -88,6 +93,7 @@ export default function Map() {
   );
 }
 
+//Search Component
 function Search({ panTo }) {
   const {
     ready,
@@ -110,9 +116,9 @@ function Search({ panTo }) {
         padding: "3em",
         paddingTop: 0,
         // Add onClick event to Show/Hide background Color
-        // background:
-        //   "linear-gradient(to bottom right,RGBA(25,25,25,.9),RGBA(2, 16, 25,.9)",
-        // height: "10%",
+        background:
+          "linear-gradient(to bottom right,RGBA(25,25,25,.9),RGBA(2, 16, 25,.9)",
+        height: "100%",
       }}
     >
       <Legend />
