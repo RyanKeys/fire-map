@@ -1,6 +1,5 @@
 import React from "react";
 import "../../App.css";
-import Legend from "../map/legend";
 import { GoogleMap, useLoadScript, Marker } from "@react-google-maps/api";
 import usePlacesAutoComplete, {
   getGeocode,
@@ -23,6 +22,7 @@ const options = {
   disableDefaultUI: true,
   zoomControl: true,
 };
+
 //Map Component
 export default function Map() {
   //Loads Map w/API key and desired libraries
@@ -43,15 +43,33 @@ export default function Map() {
     mapRef.current.setZoom(14);
   }, []);
 
+  const openLegend = (fire) => {
+    const legend = document.getElementById("search");
+    legend.style.height = "100vh";
+
+    populateSearch(fire);
+  };
+
+  const populateSearch = (fire) => {
+    const searchResults = document.getElementById("searchResults");
+    searchResults.innerHTML += fireResultsHtml(fire);
+    searchResults.style.display = "block";
+    searchResults.style.visibility = "visible";
+    return {
+      searchResults,
+    };
+  };
+  const fireResultsHtml = (fire) => {
+    return `<div id=fireResults><h1 id=fireTitle>${fire.id}</h1>
+    <p>${fire.latitude}</p><p>${fire.longitude}</p></div>`;
+  };
   if (loadError) return "Error loading maps";
-  if (!isLoaded) return "Loading maps";
+  if (!isLoaded) return "Loading Fire Data.";
+
   //Makes map fullscreen
   const mapStyles = {
     height: "100vh",
     width: "100%",
-  };
-  const searchStyle = {
-    width: "100em",
   };
   //random center location. TODO: Should request Google Geocode API
   const defaultCenter = {
@@ -81,6 +99,13 @@ export default function Map() {
               lat: parseFloat(fire.latitude),
               lng: parseFloat(fire.longitude),
             }}
+            onClick={async () => {
+              console.log(fire.id);
+              const lat = parseFloat(fire.latitude);
+              const lng = parseFloat(fire.longitude);
+              panTo({ lat, lng });
+              openLegend(fire);
+            }}
             icon={{
               url: "/fire.png",
               scaledSize: new window.google.maps.Size(30, 30),
@@ -95,6 +120,19 @@ export default function Map() {
 
 //Search Component
 function Search({ panTo }) {
+  const searchInactive = {
+    position: "absolute",
+    zIndex: 4,
+    padding: "5em",
+    paddingTop: 0,
+    paddingBottom: 0,
+    // Add onClick event to Show/Hide background Color / height
+    background:
+      "linear-gradient(to bottom right,RGBA(25,25,25,.9),RGBA(2, 16, 25,.9)",
+    height: "15vh",
+    transition: "height 1s",
+  };
+
   const {
     ready,
     value,
@@ -108,20 +146,10 @@ function Search({ panTo }) {
     },
   });
   return (
-    <div
-      className="search"
-      style={{
-        position: "absolute",
-        zIndex: 4,
-        padding: "3em",
-        paddingTop: 0,
-        // Add onClick event to Show/Hide background Color
-        background:
-          "linear-gradient(to bottom right,RGBA(25,25,25,.9),RGBA(2, 16, 25,.9)",
-        height: "100%",
-      }}
-    >
-      <Legend />
+    <div id="search" style={searchInactive}>
+      <h1 style={{ textShadow: "4px 4px #111", color: "whitesmoke" }}>
+        Active Fires
+      </h1>
       <Combobox
         onSelect={async (address) => {
           setValue(address, true);
@@ -141,19 +169,23 @@ function Search({ panTo }) {
           disabled={!ready}
           placeholder="Enter an Address:"
         />
-        <ComboboxPopover>
+        <ComboboxPopover style={{ zIndex: 12 }}>
           {status === "OK" &&
             data.map(({ id, description }) => (
-              <div style={{ zIndex: 12 }}>
+              <div>
                 <ComboboxOption
                   key={id}
-                  style={{ zIndex: 10 }}
+                  style={{ zIndex: 12 }}
                   value={description}
                 />
               </div>
             ))}
         </ComboboxPopover>
       </Combobox>
+      <div
+        id="searchResults"
+        style={{ display: "none", visibility: "hidden" }}
+      ></div>
     </div>
   );
 }

@@ -7,3 +7,12 @@
   height: 2rem;
   z-index: 14;
 }
+
+#fireTitle {
+  color: whitesmoke;
+  font-size: 1.5em;
+}
+
+#fireResults {
+  padding: 0;
+}
